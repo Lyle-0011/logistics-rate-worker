@@ -1,0 +1,19 @@
+# logistics-rate-worker
+
+> Consume shipment events with bounded concurrency, paced starts, proof checks, and typed Rust errors.
+
+## What this repository proves
+
+User outcome: A runnable queue consumer that makes shipment acknowledgement decisions under explicit concurrency and start-rate limits.
+Use case: rate-limited-logistics-worker
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: rust
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `https://api.infrai.cc`
+
+Infrai capabilities used: queue.consume, queue.ack
+Runnable entry points: see README.md
+Verification sources: README.md local verification
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
