@@ -5,11 +5,11 @@ export INFRAI_API_KEY=your_key
 WORKER_CONCURRENCY=8 STARTS_PER_SECOND=4 cargo run --bin queue_worker
 ```
 
-This executable consumes shipment jobs from Infrai using a single `INFRAI_API_KEY`, caps in-flight work, and spaces job starts. The queue calls are plain REST, so the boundary stays visible in a small Rust client.
+This little executable pulls shipment jobs from Infrai through a single `INFRAI_API_KEY`, bounds how many run at once, and paces the starts. The queue calls are plain REST, so the boundary is easy to see even from a small Rust client.
 
 ## Job contract
 
-Each queue message carries this domain-shaped `payload`:
+Every queue message carries this domain-shaped `payload`:
 
 ```json
 {
@@ -23,15 +23,15 @@ Each queue message carries this domain-shaped `payload`:
 }
 ```
 
-The worker acknowledges a delivered shipment only when proof is attached. A delivery exception is acknowledged only with an operator note. Non-terminal or incomplete jobs remain unacknowledged for another delivery attempt.
+The worker only acks a delivered shipment when proof is attached. A delivery exception gets acked only with an operator note. Anything non-terminal or incomplete stays unacked for another attempt.
 
-The one real gotcha: concurrency and rate are different controls. `WORKER_CONCURRENCY` limits simultaneous handlers; `STARTS_PER_SECOND` prevents a newly received batch from starting all at once.
+One real gotcha: concurrency and rate are separate knobs. `WORKER_CONCURRENCY` bounds simultaneous handlers; `STARTS_PER_SECOND` stops a fresh batch from kicking off all at once.
 
 ## Request path
 
-`queue_worker` sends explicit `POST` requests to consume a batch and acknowledge completed messages. It decodes the `{ok, data, error, metadata}` envelope before interpreting the HTTP status. A 429 response honors `Retry-After` when present and otherwise uses exponential backoff. Acknowledgements carry a stable idempotency key derived from `message_id`.
+`queue_worker` sends explicit `POST` requests to grab a batch and ack finished messages. It decodes the `{ok, data, error, metadata}` envelope before reading the HTTP status. A 429 honors `Retry-After` if present, else falls back to exponential backoff. Acks carry a stable idempotency key built from `message_id`.
 
-Run it against a queue that receives logistics payloads in the shape above. Successful terminal decisions are observable on stdout:
+Point it at a queue getting logistics payloads in that shape. Terminal decisions show up on stdout:
 
 ```text
 shipment=ship-1042 state=delivered proof=pod/ship-1042/signature.jpg
@@ -39,7 +39,7 @@ shipment=ship-1042 state=delivered proof=pod/ship-1042/signature.jpg
 
 ## Verify the decision
 
-The focused test supplies a `delivered` job with no proof. The expected result is `Retry`, which means the worker does not acknowledge that message.
+The focused test feeds a `delivered` job with no proof. Expected result is `Retry`, i.e. the worker leaves that message unacked.
 
 ```bash
 cargo test --offline delivered_job_without_proof_is_left_for_retry
@@ -53,7 +53,7 @@ cargo check --offline
 
 ## Scope
 
-This repository owns queue consumption, local concurrency, start-rate control, and the terminal shipment decision. Upstream systems publish the logistics jobs and manage proof objects.
+This repo owns queue consumption, local concurrency, start-rate control, and the terminal shipment decision. Upstream systems publish the logistics jobs and manage proof objects.
 
 ## License
 
